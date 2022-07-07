@@ -110,11 +110,13 @@ public:
 
     // Возвращает ссылку на элемент с индексом index
     Type& operator[](size_t index) noexcept {
+        assert(index >= 0 && index < size_);
         return items_[index];
     }
 
     // Возвращает константную ссылку на элемент с индексом index
     const Type& operator[](size_t index) const noexcept {
+        assert(index >= 0 && index < size_);
         return items_[index];
     }
 
@@ -156,8 +158,10 @@ public:
             capacity_ = real_new_size;
         }
         else {
-            for (size_t i = (size_ > static_cast<size_t>(new_size) ? static_cast<size_t>(new_size) : size_); i <= (size_ > static_cast<size_t>(new_size) ?  size_ : static_cast<size_t>(new_size)); ++i) {
-                items_[i] = std::move(Type());
+            if (new_size > size_) {
+                for (size_t i = size_; i <= new_size; ++i) {
+                    items_[i] = std::move(Type());
+                }
             }
             size_ = new_size;
         }
@@ -198,6 +202,7 @@ public:
     ConstIterator cend() const noexcept {
         return items_.Get() + size_;
     }
+
     // Добавляет элемент в конец вектора
     // При нехватке места увеличивает вдвое вместимость вектора
     void PushBack(Type item) {
@@ -210,11 +215,24 @@ public:
         items_[size_++] = std::move(item);
     }
 
+    // Добавляет элемент в конец вектора
+    // При нехватке места увеличивает вдвое вместимость вектора
+    void PushBack(const Type& item) {
+        if (capacity_ == size_) {
+            ArrayPtr<Type> buffer(capacity_ == 0 ? 1 : capacity_ * 2);
+            std::copy(begin()), end(), &buffer[0]);
+            items_.swap(buffer);
+            capacity_ = capacity_ == 0 ? 1 : capacity_ * 2;
+        }
+        items_[size_++] = item;
+    }
+
     // Вставляет значение value в позицию pos.
     // Возвращает итератор на вставленное значение
     // Если перед вставкой значения вектор был заполнен полностью,
     // вместимость вектора должна увеличиться вдвое, а для вектора вместимостью 0 стать равной 1
     Iterator Insert(ConstIterator pos, Type value) {
+        assert(pos >= begin() && pos < end());
         if (size_ == capacity_) {
             const int num_of_inserted_elem = std::distance(&items_[0], const_cast<Iterator>(pos));
             ArrayPtr<Type> buffer(new Type[capacity_ == 0 ? 1 : capacity_ * 2]);
@@ -234,13 +252,41 @@ public:
         }
     }
 
+    // Вставляет значение value в позицию pos.
+    // Возвращает итератор на вставленное значение
+    // Если перед вставкой значения вектор был заполнен полностью,
+    // вместимость вектора должна увеличиться вдвое, а для вектора вместимостью 0 стать равной 1
+    Iterator Insert(ConstIterator pos, const Type& value) {
+        assert(pos >= begin() && pos < end());
+        if (size_ == capacity_) {
+            const int num_of_inserted_elem = std::distance(&items_[0], const_cast<Iterator>(pos));
+            ArrayPtr<Type> buffer(new Type[capacity_ == 0 ? 1 : capacity_ * 2]);
+            std::copy(begin(), const_cast<Iterator>(pos), buffer.Get());
+            buffer[num_of_inserted_elem] = value;
+            std::copy(const_cast<Iterator>(pos)), end(), buffer.Get()[num_of_inserted_elem + 1]);
+            items_.swap(buffer);
+            capacity_ = capacity_ == 0 ? 1 : capacity_ * 2;
+            ++size_;
+            return &items_[num_of_inserted_elem];
+        }
+        else {
+            std::copy(const_cast<Iterator>(pos), end(), const_cast<Iterator>(pos) + 1);
+            *const_cast<Iterator>(pos) = value;
+            ++size_;
+            return const_cast<Iterator>(pos);
+        }
+    }
+
     // "Удаляет" последний элемент вектора. Вектор не должен быть пустым
     void PopBack() noexcept {
+        assert(size_ > 0);
         --size_;
     }
 
     // Удаляет элемент вектора в указанной позиции
     Iterator Erase(ConstIterator pos) {
+        assert(size_ > 0);
+        assert(pos >= begin() && pos < end());
         std::copy(std::make_move_iterator(const_cast<Iterator>(pos) + 1), std::make_move_iterator(end()), const_cast<Iterator>(pos));
         --size_;
         return const_cast<Iterator>(pos);
@@ -268,12 +314,12 @@ private:
 
 template <typename Type>
 inline bool operator==(const SimpleVector<Type>& lhs, const SimpleVector<Type>& rhs) {
-    return lhs.GetSize() == rhs.GetSize() and std::equal(lhs.begin(), lhs.end(), rhs.begin());
+    return lhs.GetSize() == rhs.GetSize() && std::equal(lhs.begin(), lhs.end(), rhs.begin());
 }
 
 template <typename Type>
 inline bool operator!=(const SimpleVector<Type>& lhs, const SimpleVector<Type>& rhs) {
-    return not (lhs == rhs);
+    return !(lhs == rhs);
 }
 
 template <typename Type>
@@ -283,17 +329,17 @@ inline bool operator<(const SimpleVector<Type>& lhs, const SimpleVector<Type>& r
 
 template <typename Type>
 inline bool operator<=(const SimpleVector<Type>& lhs, const SimpleVector<Type>& rhs) {
-    return lhs < rhs or lhs == rhs;
+    return lhs < rhs || lhs == rhs;
 }
 
 template <typename Type>
 inline bool operator>(const SimpleVector<Type>& lhs, const SimpleVector<Type>& rhs) {
-    return not (lhs <= rhs);
+    return !(lhs <= rhs);
 }
 
 template <typename Type>
 inline bool operator>=(const SimpleVector<Type>& lhs, const SimpleVector<Type>& rhs) {
-    return not (lhs < rhs);
+    return !(lhs < rhs);
 }
 
 
