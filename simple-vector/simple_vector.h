@@ -231,7 +231,7 @@ public:
     // Возвращает итератор на вставленное значение
     // Если перед вставкой значения вектор был заполнен полностью,
     // вместимость вектора должна увеличиться вдвое, а для вектора вместимостью 0 стать равной 1
-    Iterator Insert(ConstIterator pos, Type value) {
+    Iterator Insert(ConstIterator pos, Type&& value) {
         assert(pos >= begin() && pos < end());
         if (size_ == capacity_) {
             const int num_of_inserted_elem = std::distance(&items_[0], const_cast<Iterator>(pos));
