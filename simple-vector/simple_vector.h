@@ -69,9 +69,9 @@ public:
     }
 
     SimpleVector(SimpleVector&& other) noexcept
-        : items_(new Type[other.capacity_])
-        , size_(std::move(other.size_))
-        , capacity_(std::move(other.capacity_))
+            : items_(new Type[other.capacity_])
+            , size_(std::move(other.size_))
+            , capacity_(std::move(other.capacity_))
     {
         std::copy(std::make_move_iterator(other.begin()), std::make_move_iterator(other.end()), begin());
         other.Clear();
@@ -110,7 +110,7 @@ public:
 
     // Возвращает ссылку на элемент с индексом index
     Type& operator[](size_t index) noexcept {
-        assert(index >= 0 && index < size_);
+        assert(index < size_);
         return items_[index];
     }
 
@@ -205,14 +205,14 @@ public:
 
     // Добавляет элемент в конец вектора
     // При нехватке места увеличивает вдвое вместимость вектора
-    void PushBack(Type item) {
+    void PushBack(Type&& item) {
         if (capacity_ == size_) {
             ArrayPtr<Type> buffer(capacity_ == 0 ? 1 : capacity_ * 2);
-            std::copy(std::make_move_iterator(begin()), std::make_move_iterator(end()), &buffer[0]);
+            std::copy(begin(), end(), &buffer[0]);
             items_.swap(buffer);
             capacity_ = capacity_ == 0 ? 1 : capacity_ * 2;
         }
-        items_[size_++] = std::move(item);
+        items_[size_++] = std::exchange(item, Type());
     }
 
     // Добавляет элемент в конец вектора
@@ -220,7 +220,7 @@ public:
     void PushBack(const Type& item) {
         if (capacity_ == size_) {
             ArrayPtr<Type> buffer(capacity_ == 0 ? 1 : capacity_ * 2);
-            std::copy(begin()), end(), &buffer[0]);
+            std::copy(begin(), end(), &buffer[0]);
             items_.swap(buffer);
             capacity_ = capacity_ == 0 ? 1 : capacity_ * 2;
         }
@@ -263,7 +263,7 @@ public:
             ArrayPtr<Type> buffer(new Type[capacity_ == 0 ? 1 : capacity_ * 2]);
             std::copy(begin(), const_cast<Iterator>(pos), buffer.Get());
             buffer[num_of_inserted_elem] = value;
-            std::copy(const_cast<Iterator>(pos)), end(), buffer.Get()[num_of_inserted_elem + 1]);
+            std::copy(const_cast<Iterator>(pos)), end(), buffer.Get()[num_of_inserted_elem + 1];
             items_.swap(buffer);
             capacity_ = capacity_ == 0 ? 1 : capacity_ * 2;
             ++size_;
